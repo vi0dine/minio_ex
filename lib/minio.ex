@@ -46,10 +46,6 @@ defmodule Minio do
   defp is_valid_object_name(name) when is_bitstring(name), do: :ok
   defp is_valid_object_name(_), do: {:error, "Object name must be a string"}
 
-  defp get_headers(uri) do
-    %{"Host" => uri.host}
-  end
-
   defp get_signed_headers(headers) do
     headers
     |> Map.keys()
@@ -69,11 +65,7 @@ defmodule Minio do
   end
 
   defp credential(client) do
-    [
-      client.access_key,
-      get_scope(client)
-    ]
-    |> Enum.join("/")
+    client.access_key <> "/" <> get_scope(client)
   end
 
   def get_query(client, headers) do
@@ -88,18 +80,15 @@ defmodule Minio do
   end
 
   defp get_canonical_rquest(method, uri, headers) do
-    url_path = uri.path
-    url_query = String.replace(uri.query, "%7E", "~")
-
     [
       method |> Atom.to_string() |> String.upcase(),
-      url_path,
-      url_query,
+      uri.path,
+      uri.query,
     ]
     |> Kernel.++(
       Enum.sort(headers)
       |> Enum.map(fn {k, v} ->
-        "#{String.downcase(k)}:#{to_string(v)}"
+        "#{String.downcase(k)}:#{to_string(v) |> String.trim()}"
       end)
     )
     |> Kernel.++(["", get_signed_headers(headers), @unsigned_payload])
@@ -126,6 +115,9 @@ defmodule Minio do
     |> Enum.join("\n")
   end
 
+  defp get_host(%URI{host: host, port: nil}), do: to_string(host)
+  defp get_host(%URI{host: host, port: port}), do: "#{host}:#{port}"
+
   def presigned_url(
         %Minio{} = client,
         method,
@@ -134,7 +126,7 @@ defmodule Minio do
     with :ok <- is_valid_bucket_name(opts[:bucket_name]),
          :ok <- is_valid_object_name(opts[:object_name]) do
       uri = get_target_url(client, opts) |> URI.parse()
-      headers_to_sign = get_headers(uri)
+      headers_to_sign = %{"Host" => get_host(uri)}
       new_uri = Map.put(uri, :query, get_query(client, headers_to_sign))
 
       string_to_sign =
@@ -142,7 +134,6 @@ defmodule Minio do
           client,
           get_canonical_rquest(method, new_uri, headers_to_sign)
         )
-        |> IO.inspect()
 
       signature =
         client
