@@ -20,7 +20,7 @@ defmodule Minio.MixProject do
 
   defp deps do
     [
-      {:jason, "~> 1.1"}
+      {:ex_doc, "~> 0.19.1", only: :dev, runtime: false}
     ]
   end
 end
