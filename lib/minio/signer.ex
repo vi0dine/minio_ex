@@ -26,12 +26,12 @@ defmodule Minio.Signer do
     client.access_key <> "/" <> get_scope(client, request_datetime)
   end
 
-  defp get_query(client, headers, request_datetime) do
+  defp get_query(client, headers, request_datetime, expires) do
     %{
       "X-Amz-Algorithm" => @sign_v4_algo,
       "X-Amz-Credential" => credential(client, request_datetime),
       "X-Amz-Date" => Helper.iso8601_datetime(request_datetime),
-      "X-Amz-Expires" => "604800",
+      "X-Amz-Expires" => to_string(expires),
       "X-Amz-SignedHeaders" => get_signed_headers(headers)
     }
     |> URI.encode_query()
@@ -82,9 +82,17 @@ defmodule Minio.Signer do
          :ok <- Helper.is_valid_object_name(opts[:object_name]) do
 
       request_datetime = Keyword.get(opts, :request_datetime, DateTime.utc_now())
+      link_expiry = Keyword.get(opts, :link_expiry, 604_800)
+      
       uri = Helper.get_target_uri(client.endpoint, opts)
       headers_to_sign = %{"Host" => Helper.remove_default_port(uri)}
-      new_uri = Map.put(uri, :query, get_query(client, headers_to_sign, request_datetime))
+      query = get_query(
+        client,
+        headers_to_sign,
+        request_datetime,
+        link_expiry
+      )
+      new_uri = Map.put(uri, :query, query)
 
       string_to_sign =
         string_to_sign(
