@@ -96,7 +96,7 @@ defmodule Minio.Signer do
         |> Helper.hmac(string_to_sign)
         |> Helper.hex_digest()
 
-      "#{URI.to_string(new_uri)}&X-Amz-Signature=#{signature}"
+      {:ok, "#{URI.to_string(new_uri)}&X-Amz-Signature=#{signature}"}
     else
       err -> err
     end
