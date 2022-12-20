@@ -1,9 +1,9 @@
 defmodule Minio.Helper do
-  
   @doc "HMAC-SHA256 hash computation helper"
   def hmac(key, data),
-    do: :crypto.hmac(:sha256, key, data)
+    do: :crypto.mac(:hmac, :sha256, key, data)
 
+  @spec sha256(any) :: any
   @doc "SHA256 hash computation helper"
   def sha256(data),
     do: :crypto.hash(:sha256, data)
@@ -29,13 +29,17 @@ defmodule Minio.Helper do
   Construct result url based on the endpoint, bucket name and object name.
   """
   def get_target_uri(endpoint, opts \\ []) do
-    path = case opts do
-      [bucket_name: bucket_name, object_name: object_name] ->
-        "#{bucket_name}/#{object_name}"
-      [bucket_name: bucket_name] ->
-        "#{bucket_name}"
-      _ -> ""
-    end
+    path =
+      case opts do
+        [bucket_name: bucket_name, object_name: object_name] ->
+          "#{bucket_name}/#{object_name}"
+
+        [bucket_name: bucket_name] ->
+          "#{bucket_name}"
+
+        _ ->
+          ""
+      end
 
     endpoint
     |> URI.parse()
@@ -51,7 +55,7 @@ defmodule Minio.Helper do
 
   def remove_default_port(%URI{host: host, port: port}),
     do: "#{host}:#{port}"
-  
+
   @doc """
   Checks if the bucketname provided is valid
   """
@@ -68,7 +72,6 @@ defmodule Minio.Helper do
   end
 
   def is_valid_bucket_name(_), do: {:error, "Bucket name must be a string"}
-
 
   @doc """
   checks if the objectname provided is valid
